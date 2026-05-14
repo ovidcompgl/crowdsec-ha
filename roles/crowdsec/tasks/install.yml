@@ -32,7 +32,7 @@
 - name: Instalare CrowdSec
   apt:
     name: crowdsec
-    state: "{{ crowdsec_version == 'latest' | ternary('latest', 'present') }}"
+    state: "{{ (crowdsec_version == 'latest') | ternary('latest', 'present') }}"
     update_cache: yes
 
 - name: Instalare bouncer firewall CrowdSec (cs-firewall-bouncer-iptables)
