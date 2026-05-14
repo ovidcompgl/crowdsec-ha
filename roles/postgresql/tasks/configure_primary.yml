@@ -1,0 +1,52 @@
+---
+- name: Configurare postgresql.conf pe primary
+  template:
+    src: postgresql.conf.j2
+    dest: "{{ postgresql_conf_dir }}/postgresql.conf"
+    owner: postgres
+    group: postgres
+    mode: '0644'
+  notify: restart postgresql
+
+- name: Configurare pg_hba.conf pe primary
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: '0640'
+  notify: reload postgresql
+
+- name: Creare utilizator de replicare
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ postgresql_replication_user }}"
+    password: "{{ postgresql_replication_password }}"
+    role_attr_flags: "LOGIN,REPLICATION"
+    state: present
+
+- name: Creare baza de date CrowdSec
+  become: yes
+  become_user: postgres
+  postgresql_db:
+    name: "{{ postgresql_crowdsec_db }}"
+    state: present
+
+- name: Creare utilizator CrowdSec in PostgreSQL
+  become: yes
+  become_user: postgres
+  postgresql_user:
+    name: "{{ postgresql_crowdsec_user }}"
+    password: "{{ postgresql_crowdsec_password }}"
+    db: "{{ postgresql_crowdsec_db }}"
+    priv: "ALL"
+    state: present
+
+- name: Creare slot de replicare
+  become: yes
+  become_user: postgres
+  postgresql_slot:
+    name: "{{ postgresql_replication_slot }}"
+    slot_type: physical
+    state: present

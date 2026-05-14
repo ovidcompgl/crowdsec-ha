@@ -1,0 +1,64 @@
+---
+# patroni_ops.yml - Operatii cluster Patroni
+# Utilizare:
+#   ansible-playbook patroni_ops.yml --tags status
+#   ansible-playbook patroni_ops.yml --tags failover
+#   ansible-playbook patroni_ops.yml --tags switchover
+
+- name: Operatii cluster Patroni
+  hosts: crowdsec_ha
+  become: yes
+  gather_facts: no
+
+  tasks:
+    # ---- STARE CLUSTER ------------------------------------------------
+    - name: Stare cluster Patroni
+      command: patronictl -c /etc/patroni/patroni.yml list
+      register: patroni_list
+      changed_when: false
+      run_once: true
+      tags: [status, always]
+
+    - name: Afisare stare cluster
+      debug:
+        msg: "{{ patroni_list.stdout_lines }}"
+      run_once: true
+      tags: [status, always]
+
+    # ---- FAILOVER (promovare replica la primary) ----------------------
+    # Foloseste cand vrei sa promovezi manual replica la primary
+    # (Patroni face asta automat la crash - acest task e pentru switchover planificat)
+    - name: Switchover planificat (muta primary pe alt nod)
+      command: >
+        patronictl -c /etc/patroni/patroni.yml switchover crowdsec-ha
+        --force
+      register: switchover_result
+      changed_when: true
+      run_once: true
+      tags: [switchover]
+
+    - name: Afisare rezultat switchover
+      debug:
+        msg: "{{ switchover_result.stdout_lines }}"
+      run_once: true
+      tags: [switchover]
+
+    # ---- RESTART ROLLING ----------------------------------------------
+    - name: Restart rolling cluster (fara downtime)
+      command: >
+        patronictl -c /etc/patroni/patroni.yml restart crowdsec-ha
+        --force
+      register: restart_result
+      changed_when: true
+      run_once: true
+      tags: [restart]
+
+    # ---- REINITIALIZARE REPLICA --------------------------------------
+    - name: Reinitializare replica (reconstruieste din primary)
+      command: >
+        patronictl -c /etc/patroni/patroni.yml reinit crowdsec-ha
+        {{ inventory_hostname }} --force
+      register: reinit_result
+      changed_when: true
+      tags: [reinit]
+      when: postgresql_role == 'replica'

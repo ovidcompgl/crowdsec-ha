@@ -1,0 +1,54 @@
+---
+# ========================
+# Retea & VIP
+# ========================
+vip_address: "10.10.100.21"
+vip_interface: "eth0"
+keepalived_auth_pass: "Str0ngK33p@liv3d!"
+keepalived_router_id: 51
+
+# ========================
+# PostgreSQL
+# ========================
+postgresql_version: "15"
+postgresql_data_dir: "/var/lib/postgresql/{{ postgresql_version }}/main"
+postgresql_conf_dir: "/etc/postgresql/{{ postgresql_version }}/main"
+postgresql_port: 5432
+
+# Parola superuser postgres (necesara pentru Patroni)
+postgresql_superuser_password: "P0stgr3sSuper@Pass!"
+
+# Utilizator replicare (folosit si pentru pg_rewind in Patroni)
+postgresql_replication_user: "replicator"
+postgresql_replication_password: "R3plic@t0rP@ss!"
+
+# Utilizator CrowdSec
+postgresql_crowdsec_db: "crowdsec"
+postgresql_crowdsec_user: "crowdsec"
+postgresql_crowdsec_password: "CrowdS3cDB@Pass!"
+
+# ========================
+# Patroni (HA PostgreSQL automat)
+# ========================
+patroni_api_port: 8008          # REST API Patroni (health, leader, failover)
+patroni_raft_port: 2380         # Port DCS Raft intern intre noduri
+
+# ========================
+# CrowdSec
+# ========================
+crowdsec_version: "latest"
+crowdsec_db_dsn: "postgresql://{{ postgresql_crowdsec_user }}:{{ postgresql_crowdsec_password }}@{{ vip_address }}:{{ postgresql_port }}/{{ postgresql_crowdsec_db }}"
+crowdsec_enroll_key: ""        # Optional: cheie de enroll in CrowdSec Console
+crowdsec_api_port: 8080
+crowdsec_metrics_port: 6060
+
+# Colectii CrowdSec de instalat
+crowdsec_collections:
+  - crowdsecurity/linux
+  - crowdsecurity/sshd
+  - crowdsecurity/nginx
+
+# ========================
+# General
+# ========================
+timezone: "Europe/Bucharest"

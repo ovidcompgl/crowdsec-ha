@@ -1,0 +1,6 @@
+---
+- name: Incluziune task-uri instalare PostgreSQL + Patroni
+  include_tasks: install.yml
+
+- name: Configurare si pornire Patroni
+  include_tasks: configure_patroni.yml

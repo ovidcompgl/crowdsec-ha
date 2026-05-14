@@ -1,0 +1,33 @@
+---
+- name: Instalare dependinte CrowdSec
+  apt:
+    name:
+      - curl
+      - gnupg2
+      - apt-transport-https
+      - ca-certificates
+    state: present
+    update_cache: yes
+
+- name: Adaugare cheie GPG CrowdSec
+  apt_key:
+    url: https://packagecloud.io/crowdsec/crowdsec/gpgkey
+    state: present
+
+- name: Adaugare repository CrowdSec
+  apt_repository:
+    repo: "deb https://packagecloud.io/crowdsec/crowdsec/{{ ansible_distribution | lower }} {{ ansible_distribution_release }} main"
+    state: present
+    filename: crowdsec
+
+- name: Instalare CrowdSec
+  apt:
+    name: crowdsec
+    state: "{{ crowdsec_version == 'latest' | ternary('latest', 'present') }}"
+    update_cache: yes
+
+- name: Instalare bouncer firewall CrowdSec (cs-firewall-bouncer-iptables)
+  apt:
+    name: crowdsec-firewall-bouncer-iptables
+    state: present
+    update_cache: yes

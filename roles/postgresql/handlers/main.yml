@@ -1,0 +1,17 @@
+---
+# Patroni este procesul care gestioneaza PostgreSQL
+# NU restarteaza postgresql direct - restarteaza Patroni
+
+- name: restart patroni
+  systemd:
+    name: patroni
+    state: restarted
+
+- name: reload patroni
+  systemd:
+    name: patroni
+    state: reloaded
+
+- name: reload systemd
+  systemd:
+    daemon_reload: yes

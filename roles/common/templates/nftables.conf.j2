@@ -1,0 +1,57 @@
+#!/usr/sbin/nft -f
+# nftables.conf - {{ inventory_hostname }}
+# Gestionat de Ansible - NU modifica manual
+
+flush ruleset
+
+table inet filter {
+    chain input {
+        type filter hook input priority 0; policy drop;
+
+        # Permite loopback
+        iifname lo accept
+
+        # Permite conexiuni stabilite
+        ct state established,related accept
+
+        # ICMP / ping
+        ip protocol icmp accept
+        ip6 nexthdr icmpv6 accept
+
+        # SSH
+        tcp dport 22 accept
+
+        # PostgreSQL (inter-nod si VIP)
+        ip saddr 10.10.100.0/24 tcp dport {{ postgresql_port }} accept
+
+        # Patroni REST API (health checks, failover trigger)
+        ip saddr 10.10.100.0/24 tcp dport {{ patroni_api_port }} accept
+
+        # Patroni Raft DCS (consens inter-noduri)
+        ip saddr 10.10.100.0/24 tcp dport {{ patroni_raft_port }} accept
+
+        # CrowdSec API LAPI
+        ip saddr 10.10.100.0/24 tcp dport {{ crowdsec_api_port }} accept
+
+        # CrowdSec Metrics
+        ip saddr 127.0.0.1 tcp dport {{ crowdsec_metrics_port }} accept
+
+        # Keepalived VRRP (protocol 112)
+        ip protocol vrrp accept
+
+        # Keepalived multicast / unicast
+        ip saddr 10.10.100.0/24 udp dport 112 accept
+
+        # Log si drop restul
+        log prefix "[nftables DROP] " flags all
+        drop
+    }
+
+    chain forward {
+        type filter hook forward priority 0; policy drop;
+    }
+
+    chain output {
+        type filter hook output priority 0; policy accept;
+    }
+}

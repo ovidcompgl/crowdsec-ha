@@ -1,0 +1,63 @@
+---
+- name: Setare hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Setare timezone
+  timezone:
+    name: "{{ timezone }}"
+
+- name: Actualizare pachete sistem
+  apt:
+    upgrade: safe
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Instalare utilitare de baza
+  apt:
+    name:
+      - vim
+      - curl
+      - wget
+      - htop
+      - net-tools
+      - nftables
+      - fail2ban
+      - unattended-upgrades
+      - logrotate
+      - rsync
+      - lsof
+      - tcpdump
+      - jq
+    state: present
+
+- name: Configurare /etc/hosts pentru noduri HA
+  blockinfile:
+    path: /etc/hosts
+    marker: "# {mark} ANSIBLE MANAGED - CrowdSec HA Nodes"
+    block: |
+      10.10.100.171   node1 node1.crowdsec
+      10.10.100.72    node2 node2.crowdsec
+      10.10.100.21    crowdsec-vip crowdsec-vip.local
+
+- name: Activare nftables
+  systemd:
+    name: nftables
+    state: started
+    enabled: yes
+
+- name: Dezactivare firewalld daca exista
+  systemd:
+    name: firewalld
+    state: stopped
+    enabled: no
+  ignore_errors: yes
+
+- name: Deschidere porturi necesare in nftables
+  template:
+    src: nftables.conf.j2
+    dest: /etc/nftables.conf
+    owner: root
+    group: root
+    mode: '0640'
+  notify: reload nftables

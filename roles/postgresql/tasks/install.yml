@@ -1,0 +1,74 @@
+---
+- name: Instalare dependinte PostgreSQL si Patroni
+  apt:
+    name:
+      - gnupg2
+      - curl
+      - ca-certificates
+      - python3-psycopg2
+      - python3-pip
+      - python3-venv
+      - acl
+      - watchdog
+    state: present
+    update_cache: yes
+
+- name: Adaugare cheie GPG PostgreSQL
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+- name: Adaugare repository PostgreSQL
+  apt_repository:
+    repo: "deb https://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+    filename: pgdg
+
+- name: Instalare PostgreSQL {{ postgresql_version }}
+  apt:
+    name:
+      - "postgresql-{{ postgresql_version }}"
+      - "postgresql-client-{{ postgresql_version }}"
+      - "postgresql-contrib-{{ postgresql_version }}"
+    state: present
+    update_cache: yes
+
+# Patroni va gestiona ciclul de viata al PostgreSQL - oprire serviciu default
+- name: Oprire si dezactivare serviciu postgresql default (Patroni il va gestiona)
+  systemd:
+    name: postgresql
+    state: stopped
+    enabled: no
+  ignore_errors: yes
+
+- name: Instalare Patroni cu raft via pip
+  pip:
+    name:
+      - patroni[raft]
+      - psycopg2-binary
+    executable: pip3
+    state: present
+
+- name: Creare director configurare Patroni
+  file:
+    path: /etc/patroni
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0750'
+
+- name: Creare director date Patroni Raft
+  file:
+    path: /var/lib/patroni
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0700'
+
+- name: Creare director log Patroni
+  file:
+    path: /var/log/patroni
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0750'

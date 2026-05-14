@@ -1,0 +1,46 @@
+---
+# playbook de verificare stare HA dupa deploy
+
+- name: Verificare stare cluster CrowdSec HA
+  hosts: crowdsec_ha
+  become: yes
+  gather_facts: no
+
+  tasks:
+    - name: Verificare stare PostgreSQL
+      command: systemctl is-active postgresql
+      register: pg_status
+      changed_when: false
+
+    - name: Verificare PostgreSQL primary/replica
+      become: yes
+      become_user: postgres
+      command: psql -c "SELECT pg_is_in_recovery(), inet_server_addr(), version();"
+      register: pg_role
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Verificare stare CrowdSec
+      command: systemctl is-active crowdsec
+      register: cs_status
+      changed_when: false
+
+    - name: Verificare stare Keepalived
+      command: systemctl is-active keepalived
+      register: kp_status
+      changed_when: false
+
+    - name: Verificare VIP activ
+      command: ip addr show dev eth0
+      register: ip_addrs
+      changed_when: false
+
+    - name: Afisare raport stare
+      debug:
+        msg:
+          - "Host: {{ inventory_hostname }} ({{ ansible_host }})"
+          - "PostgreSQL: {{ pg_status.stdout }}"
+          - "PostgreSQL rol: {{ 'REPLICA' if 'f' not in (pg_role.stdout | default('')) else 'PRIMARY' }}"
+          - "CrowdSec:   {{ cs_status.stdout }}"
+          - "Keepalived: {{ kp_status.stdout }}"
+          - "VIP prezent: {{ 'DA' if vip_address in ip_addrs.stdout else 'NU' }}"

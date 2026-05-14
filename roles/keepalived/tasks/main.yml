@@ -1,0 +1,53 @@
+---
+- name: Instalare Keepalived
+  apt:
+    name:
+      - keepalived
+      - ipvsadm
+    state: present
+    update_cache: yes
+
+- name: Activare ip_nonlocal_bind
+  sysctl:
+    name: net.ipv4.ip_nonlocal_bind
+    value: '1'
+    state: present
+    reload: yes
+
+- name: Activare ip_forward
+  sysctl:
+    name: net.ipv4.ip_forward
+    value: '1'
+    state: present
+    reload: yes
+
+- name: Configurare keepalived.conf
+  template:
+    src: keepalived.conf.j2
+    dest: /etc/keepalived/keepalived.conf
+    owner: root
+    group: root
+    mode: '0640'
+  notify: restart keepalived
+
+- name: Creare script health-check PostgreSQL
+  template:
+    src: check_pgsql.sh.j2
+    dest: /etc/keepalived/check_pgsql.sh
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Creare script health-check CrowdSec
+  template:
+    src: check_crowdsec.sh.j2
+    dest: /etc/keepalived/check_crowdsec.sh
+    owner: root
+    group: root
+    mode: '0750'
+
+- name: Pornire si activare Keepalived
+  systemd:
+    name: keepalived
+    state: started
+    enabled: yes

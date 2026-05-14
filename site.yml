@@ -1,0 +1,33 @@
+---
+# ============================================================
+# site.yml - Playbook principal CrowdSec + PostgreSQL HA
+# Noduri: 10.10.100.171 (primary), 10.10.100.72 (replica)
+# VIP: 10.10.100.21
+# ============================================================
+
+- name: Configurare sistem de baza pe toate nodurile
+  hosts: crowdsec_ha
+  become: yes
+  roles:
+    - common
+
+- name: Deploy PostgreSQL HA
+  hosts: crowdsec_ha
+  become: yes
+  serial:
+    - 1   # Mai intai primary, apoi replica
+    - 1
+  roles:
+    - postgresql
+
+- name: Deploy CrowdSec
+  hosts: crowdsec_ha
+  become: yes
+  roles:
+    - crowdsec
+
+- name: Deploy Keepalived (HA VIP)
+  hosts: crowdsec_ha
+  become: yes
+  roles:
+    - keepalived

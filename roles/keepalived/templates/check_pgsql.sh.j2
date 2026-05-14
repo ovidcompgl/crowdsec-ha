@@ -1,0 +1,15 @@
+#!/bin/bash
+# Health check Patroni leader pentru Keepalived
+# VIP-ul merge NUMAI pe nodul care este PRIMARY (leader) in Patroni
+# Patroni REST API returneaza HTTP 200 pe /leader doar daca nodul este primary
+
+# Verifica daca acest nod este liderul Patroni
+HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:{{ patroni_api_port }}/leader)
+
+if [ "$HTTP_CODE" = "200" ]; then
+    # Acest nod este PRIMARY - merita VIP-ul
+    exit 0
+else
+    # Acest nod este REPLICA sau Patroni nu ruleaza
+    exit 1
+fi

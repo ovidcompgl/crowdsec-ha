@@ -1,0 +1,41 @@
+---
+- name: Oprire CrowdSec inainte de configurare
+  systemd:
+    name: crowdsec
+    state: stopped
+
+- name: Configurare config.yaml CrowdSec (PostgreSQL backend)
+  template:
+    src: config.yaml.j2
+    dest: /etc/crowdsec/config.yaml
+    owner: root
+    group: root
+    mode: '0640'
+
+- name: Configurare local_api_credentials.yaml
+  template:
+    src: local_api_credentials.yaml.j2
+    dest: /etc/crowdsec/local_api_credentials.yaml
+    owner: root
+    group: root
+    mode: '0600'
+
+- name: Instalare colectii CrowdSec
+  command: "cscli collections install {{ item }}"
+  loop: "{{ crowdsec_collections }}"
+  ignore_errors: yes
+
+- name: Actualizare hub CrowdSec
+  command: cscli hub update
+  ignore_errors: yes
+
+- name: Pornire si activare CrowdSec
+  systemd:
+    name: crowdsec
+    state: started
+    enabled: yes
+
+- name: Inregistrare in CrowdSec Console (optional)
+  command: "cscli console enroll {{ crowdsec_enroll_key }}"
+  when: crowdsec_enroll_key | length > 0
+  ignore_errors: yes

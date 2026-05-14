@@ -1,0 +1,53 @@
+---
+- name: Oprire PostgreSQL pe replica
+  systemd:
+    name: postgresql
+    state: stopped
+
+- name: Stergere date existente pe replica
+  file:
+    path: "{{ postgresql_data_dir }}"
+    state: absent
+
+- name: Creare director date replica
+  file:
+    path: "{{ postgresql_data_dir }}"
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0700'
+
+- name: Clonare date de pe primary (pg_basebackup)
+  become: yes
+  become_user: postgres
+  command: >
+    pg_basebackup
+    -h {{ hostvars[groups['crowdsec_ha'] | select('match', 'node1') | first]['ansible_host'] }}
+    -U {{ postgresql_replication_user }}
+    -D {{ postgresql_data_dir }}
+    -P -Xs -R
+    --slot={{ postgresql_replication_slot }}
+  environment:
+    PGPASSWORD: "{{ postgresql_replication_password }}"
+
+- name: Configurare postgresql.conf pe replica
+  template:
+    src: postgresql_replica.conf.j2
+    dest: "{{ postgresql_conf_dir }}/postgresql.conf"
+    owner: postgres
+    group: postgres
+    mode: '0644'
+
+- name: Configurare pg_hba.conf pe replica
+  template:
+    src: pg_hba.conf.j2
+    dest: "{{ postgresql_conf_dir }}/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: '0640'
+
+- name: Pornire PostgreSQL pe replica
+  systemd:
+    name: postgresql
+    state: started
+    enabled: yes

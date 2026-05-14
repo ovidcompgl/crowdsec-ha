@@ -1,0 +1,8 @@
+#!/bin/bash
+# Health check CrowdSec pentru Keepalived
+
+if curl -sf http://127.0.0.1:{{ crowdsec_api_port }}/health &>/dev/null; then
+    exit 0
+else
+    exit 1
+fi

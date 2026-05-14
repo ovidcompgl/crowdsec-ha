@@ -1,0 +1,6 @@
+---
+- name: Incluziune task-uri instalare CrowdSec
+  include_tasks: install.yml
+
+- name: Incluziune task-uri configurare CrowdSec
+  include_tasks: configure.yml

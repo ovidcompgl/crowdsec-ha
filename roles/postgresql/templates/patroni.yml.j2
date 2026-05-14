@@ -1,0 +1,97 @@
+# =============================================================
+# patroni.yml - {{ inventory_hostname }}
+# Gestionat de Ansible - NU modifica manual
+# =============================================================
+
+scope: crowdsec-ha
+name: {{ inventory_hostname }}
+
+restapi:
+  listen: 0.0.0.0:{{ patroni_api_port }}
+  connect_address: {{ ansible_host }}:{{ patroni_api_port }}
+
+# DCS intern Raft - nu necesita etcd/consul
+raft:
+  data_dir: /var/lib/patroni/raft
+  self_addr: {{ ansible_host }}:{{ patroni_raft_port }}
+  partner_addrs:
+{% for host in groups['crowdsec_ha'] %}
+{% if hostvars[host]['ansible_host'] != ansible_host %}
+    - {{ hostvars[host]['ansible_host'] }}:{{ patroni_raft_port }}
+{% endif %}
+{% endfor %}
+
+bootstrap:
+  dcs:
+    ttl: 30
+    loop_wait: 10
+    retry_timeout: 30
+    maximum_lag_on_failover: 1048576       # 1 MB
+    primary_start_timeout: 300
+    synchronous_mode: false                # async replication (mai performant)
+    postgresql:
+      use_pg_rewind: true
+      use_slots: true
+      parameters:
+        wal_level: replica
+        hot_standby: "on"
+        max_connections: 200
+        max_wal_senders: 5
+        max_replication_slots: 5
+        wal_keep_size: 512MB
+        hot_standby_feedback: "on"
+        shared_buffers: 256MB
+        effective_cache_size: 768MB
+        work_mem: 4MB
+        checkpoint_completion_target: 0.9
+        timezone: {{ timezone }}
+        log_destination: stderr
+        logging_collector: "on"
+        log_directory: log
+        log_filename: postgresql-%Y-%m-%d.log
+        log_rotation_age: 1d
+        log_rotation_size: 100MB
+        log_min_messages: warning
+        log_connections: "on"
+        log_disconnections: "on"
+        log_line_prefix: "%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h "
+
+  initdb:
+    - encoding: UTF8
+    - data-checksums
+
+  pg_hba:
+    - local   all             postgres                              peer
+    - local   all             all                                   peer
+    - host    all             all             127.0.0.1/32          scram-sha-256
+    - host    all             all             ::1/128               scram-sha-256
+    - host    {{ postgresql_crowdsec_db }}   {{ postgresql_crowdsec_user }}   10.10.100.0/24   scram-sha-256
+    - host    replication     {{ postgresql_replication_user }}     10.10.100.0/24   scram-sha-256
+
+postgresql:
+  listen: 0.0.0.0:{{ postgresql_port }}
+  connect_address: {{ ansible_host }}:{{ postgresql_port }}
+  data_dir: {{ postgresql_data_dir }}
+  bin_dir: /usr/lib/postgresql/{{ postgresql_version }}/bin
+  pgpass: /var/lib/postgresql/.pgpass
+  authentication:
+    replication:
+      username: {{ postgresql_replication_user }}
+      password: {{ postgresql_replication_password }}
+    superuser:
+      username: postgres
+      password: {{ postgresql_superuser_password }}
+    rewind:
+      username: {{ postgresql_replication_user }}
+      password: {{ postgresql_replication_password }}
+  parameters:
+    unix_socket_directories: /var/run/postgresql
+
+watchdog:
+  mode: off    # Activare: 'required' cand ai watchdog device /dev/watchdog
+
+tags:
+  nofailover: false
+  noloadbalance: false
+  clonefrom: false
+  nosync: false
