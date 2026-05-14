@@ -29,16 +29,13 @@
     state: started
     enabled: yes
 
-# Asteapta pana cluster-ul devine healthy (max 3 minute)
-- name: Asteptare cluster Patroni healthy
-  uri:
-    url: "http://127.0.0.1:{{ patroni_api_port }}/health"
-    status_code: 200
-  register: patroni_health
-  until: patroni_health.status == 200
-  retries: 36
-  delay: 5
-  ignore_errors: yes
+# Asteapta pana API-ul Patroni porneste, fara a bloca bootstrap-ul clusterului
+- name: Asteptare API Patroni disponibil
+  wait_for:
+    host: 127.0.0.1
+    port: "{{ patroni_api_port }}"
+    delay: 5
+    timeout: 180
 
 # Creare utilizatori PostgreSQL doar de pe liderul ales
 - name: Detectare lider Patroni
