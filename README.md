@@ -6,7 +6,7 @@
                          |
           +--------------+--------------+
           |                             |
-   node1: 10.10.100.171          node2: 10.10.100.72
+       node1: 10.10.100.171          node2: 10.10.100.172
    [PostgreSQL PRIMARY]    <-->  [PostgreSQL REPLICA]
    [Patroni LEADER]     Raft    [Patroni FOLLOWER]
    [CrowdSec LAPI]               [CrowdSec LAPI]
@@ -62,7 +62,7 @@ Implicit `eth0`. Modifica `vip_interface` in `group_vars/all.yml` daca e diferit
 ### 3. Acces SSH root
 ```bash
 ssh-copy-id root@10.10.100.171
-ssh-copy-id root@10.10.100.72
+ssh-copy-id root@10.10.100.172
 ```
 
 ### 4. Dependinte Ansible
@@ -105,7 +105,7 @@ Output asteptat:
 | Member | Host            | Role    | State   | TL | Lag in MB |
 +--------+-----------------+---------+---------+----+-----------+
 | node1  | 10.10.100.171:5432 | Leader  | running |  1 |           |
-| node2  | 10.10.100.72:5432  | Replica | running |  1 |         0 |
+| node2  | 10.10.100.172:5432 | Replica | running |  1 |         0 |
 +--------+-----------------+---------+---------+----+-----------+
 ```
 
