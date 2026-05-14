@@ -29,27 +29,16 @@
     state: started
     enabled: yes
 
-# Asteapta pana API-ul Patroni porneste, fara a bloca bootstrap-ul clusterului
-- name: Asteptare API Patroni disponibil
+# Asteapta pana PostgreSQL local porneste pe nodul bootstrap
+- name: Asteptare PostgreSQL local disponibil
   wait_for:
     host: 127.0.0.1
-    port: "{{ patroni_api_port }}"
+    port: "{{ postgresql_port }}"
     delay: 5
     timeout: 180
 
-# Creare utilizatori PostgreSQL doar de pe liderul ales
-- name: Detectare lider Patroni
-  uri:
-    url: "http://127.0.0.1:{{ patroni_api_port }}/leader"
-    status_code: [200, 503]
-  register: patroni_leader_check
-  changed_when: false
-  failed_when: false
-  retries: 36
-  delay: 5
-  until: patroni_leader_check.status is defined and patroni_leader_check.status in [200, 503]
-
-- name: Creare utilizator de replicare (doar pe lider)
+# Creare utilizatori si baza de date o singura data, pe primul nod
+- name: Creare utilizator de replicare
   become: yes
   become_user: postgres
   postgresql_user:
@@ -57,17 +46,19 @@
     password: "{{ postgresql_replication_password }}"
     role_attr_flags: "LOGIN,REPLICATION"
     state: present
-  when: patroni_leader_check.status == 200
+  run_once: true
+  delegate_to: "{{ groups['crowdsec_containers'] | first }}"
 
-- name: Creare baza de date CrowdSec (doar pe lider)
+- name: Creare baza de date CrowdSec
   become: yes
   become_user: postgres
   postgresql_db:
     name: "{{ postgresql_crowdsec_db }}"
     state: present
-  when: patroni_leader_check.status == 200
+  run_once: true
+  delegate_to: "{{ groups['crowdsec_containers'] | first }}"
 
-- name: Creare utilizator CrowdSec (doar pe lider)
+- name: Creare utilizator CrowdSec
   become: yes
   become_user: postgres
   postgresql_user:
@@ -76,4 +67,5 @@
     db: "{{ postgresql_crowdsec_db }}"
     priv: "ALL"
     state: present
-  when: patroni_leader_check.status == 200
+  run_once: true
+  delegate_to: "{{ groups['crowdsec_containers'] | first }}"
