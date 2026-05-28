@@ -2,7 +2,7 @@
 # ========================
 # Retea & VIP
 # ========================
-vip_address: "10.10.100.21"
+vip_address: "10.10.100.22"
 vip_interface: "eth0"
 keepalived_auth_pass: "Str0ngK33p@liv3d!"
 keepalived_router_id: 51
