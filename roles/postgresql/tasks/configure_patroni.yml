@@ -115,24 +115,32 @@
     timeout: 180
   when: patroni_active.stdout == 'active'
 
-# Creare utilizatori si baza de date o singura data, pe nodul primary curent
-- name: Verificare daca PostgreSQL local este replica
-  become: yes
-  become_user: postgres
-  command: psql -tAc "SELECT pg_is_in_recovery();"
-  register: postgresql_in_recovery
+# Creare utilizatori si baza de date o singura data, pe nodul leader Patroni curent
+- name: Verificare daca nodul local este leader Patroni
+  uri:
+    url: "http://127.0.0.1:{{ patroni_api_port }}/leader"
+    method: GET
+    status_code:
+      - 200
+      - 503
+    return_content: no
+  register: patroni_leader_check
   changed_when: false
+  failed_when: false
 
-- name: Determinare nod primary PostgreSQL
+- name: Determinare nod primary PostgreSQL din Patroni
   set_fact:
     patroni_primary_host: "{{ item }}"
   loop: "{{ groups['crowdsec_containers'] }}"
-  when: hostvars[item].postgresql_in_recovery.stdout | trim == 'f'
+  when: hostvars[item].patroni_leader_check.status | default(0) | int == 200
   run_once: true
 
 - name: Fail daca nu exista nod primary PostgreSQL
   fail:
-    msg: "Nu am gasit niciun nod PostgreSQL primary pentru operatiile de creare DB/user. Verifica Patroni: patronictl -c /etc/patroni/patroni.yml list"
+    msg: >-
+      Nu am gasit niciun nod PostgreSQL primary pentru operatiile de creare DB/user.
+      Status /leader: {% for host in groups['crowdsec_containers'] %}{{ host }}={{ hostvars[host].patroni_leader_check.status | default('n/a') }} {% endfor %}
+      Verifica Patroni: patronictl -c /etc/patroni/patroni.yml list
   when: patroni_primary_host is not defined
   run_once: true
 
