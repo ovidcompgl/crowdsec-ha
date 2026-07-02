@@ -115,7 +115,27 @@
     timeout: 180
   when: patroni_active.stdout == 'active'
 
-# Creare utilizatori si baza de date o singura data, pe primul nod
+# Creare utilizatori si baza de date o singura data, pe nodul primary curent
+- name: Verificare daca PostgreSQL local este replica
+  become: yes
+  become_user: postgres
+  command: psql -tAc "SELECT pg_is_in_recovery();"
+  register: postgresql_in_recovery
+  changed_when: false
+
+- name: Determinare nod primary PostgreSQL
+  set_fact:
+    patroni_primary_host: "{{ item }}"
+  loop: "{{ groups['crowdsec_containers'] }}"
+  when: hostvars[item].postgresql_in_recovery.stdout | trim == 'f'
+  run_once: true
+
+- name: Fail daca nu exista nod primary PostgreSQL
+  fail:
+    msg: "Nu am gasit niciun nod PostgreSQL primary pentru operatiile de creare DB/user. Verifica Patroni: patronictl -c /etc/patroni/patroni.yml list"
+  when: patroni_primary_host is not defined
+  run_once: true
+
 - name: Creare utilizator de replicare
   become: yes
   become_user: postgres
@@ -125,7 +145,7 @@
     role_attr_flags: "LOGIN,REPLICATION"
     state: present
   run_once: true
-  delegate_to: "{{ groups['crowdsec_containers'] | first }}"
+  delegate_to: "{{ patroni_primary_host }}"
 
 - name: Creare baza de date CrowdSec
   become: yes
@@ -134,7 +154,7 @@
     name: "{{ postgresql_crowdsec_db }}"
     state: present
   run_once: true
-  delegate_to: "{{ groups['crowdsec_containers'] | first }}"
+  delegate_to: "{{ patroni_primary_host }}"
 
 - name: Creare utilizator CrowdSec
   become: yes
@@ -146,7 +166,7 @@
     priv: "ALL"
     state: present
   run_once: true
-  delegate_to: "{{ groups['crowdsec_containers'] | first }}"
+  delegate_to: "{{ patroni_primary_host }}"
 
 - name: Setare owner baza CrowdSec
   become: yes
@@ -155,7 +175,7 @@
     db: postgres
     query: "ALTER DATABASE {{ postgresql_crowdsec_db }} OWNER TO {{ postgresql_crowdsec_user }};"
   run_once: true
-  delegate_to: "{{ groups['crowdsec_containers'] | first }}"
+  delegate_to: "{{ patroni_primary_host }}"
 
 - name: Grant CREATE pe schema public pentru CrowdSec
   become: yes
@@ -169,4 +189,4 @@
       ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO {{ postgresql_crowdsec_user }};
       ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO {{ postgresql_crowdsec_user }};
   run_once: true
-  delegate_to: "{{ groups['crowdsec_containers'] | first }}"
+  delegate_to: "{{ patroni_primary_host }}"
