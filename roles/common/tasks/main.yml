@@ -7,6 +7,17 @@
   timezone:
     name: "{{ timezone }}"
 
+- name: Asigurare directoare temporare sistem
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '1777'
+  loop:
+    - /tmp
+    - /var/tmp
+
 - name: Actualizare pachete sistem
   apt:
     upgrade: safe

@@ -5,6 +5,17 @@
 # VIP: 10.10.100.21
 # ============================================================
 
+- name: Bootstrap directoare temporare pentru Ansible
+  hosts: crowdsec_containers
+  gather_facts: no
+  become: no
+  tasks:
+    - name: Creeaza /tmp si /var/tmp inainte de Gathering Facts
+      raw: |
+        mkdir -p /tmp /var/tmp
+        chmod 1777 /tmp /var/tmp
+      changed_when: false
+
 - name: Configurare sistem de baza pe toate nodurile
   hosts: crowdsec_containers
   become: yes
