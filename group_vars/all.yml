@@ -39,6 +39,7 @@ patroni_force_reinit: false     # true = sterge state Patroni + PGDATA pe toate 
 # CrowdSec
 # ========================
 crowdsec_version: "latest"
+crowdsec_force_reinstall: false # true = purge pachete + sterge config/date locale CrowdSec inainte de instalare
 crowdsec_db_dsn: "postgresql://{{ postgresql_crowdsec_user }}:{{ postgresql_crowdsec_password }}@{{ vip_address }}:{{ postgresql_port }}/{{ postgresql_crowdsec_db }}"
 crowdsec_enroll_key: ""        # Optional: cheie de enroll in CrowdSec Console
 crowdsec_api_port: 8080

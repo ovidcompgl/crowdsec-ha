@@ -1,4 +1,35 @@
 ---
+- name: Oprire servicii CrowdSec inainte de reinstalare fortata
+  systemd:
+    name: "{{ item }}"
+    state: stopped
+    enabled: no
+  loop:
+    - crowdsec
+    - crowdsec-firewall-bouncer
+  failed_when: false
+  when: crowdsec_force_reinstall | bool
+
+- name: Purge pachete CrowdSec pentru reinstalare fortata
+  apt:
+    name:
+      - crowdsec
+      - crowdsec-firewall-bouncer-iptables
+    state: absent
+    purge: yes
+    autoremove: yes
+  when: crowdsec_force_reinstall | bool
+
+- name: Stergere directoare locale CrowdSec pentru reinstalare fortata
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /etc/crowdsec
+    - /var/lib/crowdsec
+    - /var/log/crowdsec
+  when: crowdsec_force_reinstall | bool
+
 - name: Instalare dependinte CrowdSec
   apt:
     name:
